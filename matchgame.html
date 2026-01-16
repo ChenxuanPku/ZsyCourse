@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>择偶模拟器：量化偏好实验</title>
+    <style>
+        :root { --bg: #0f172a; --panel: #1e293b; --accent: #38bdf8; --love: #f472b6; --marry: #fbbf24; --text: #f1f5f9; }
+        body { font-family: 'Inter', 'PingFang SC', sans-serif; background: var(--bg); color: var(--text); margin: 0; }
+        .container { max-width: 900px; margin: 0 auto; padding: 40px 20px; }
+        .card { background: var(--panel); border-radius: 12px; padding: 25px; margin-bottom: 20px; border: 1px solid #334155; }
+        .step { display: none; }
+        .active { display: block; animation: fadeIn 0.5s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .btn { background: var(--accent); color: var(--bg); border: none; padding: 14px; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.3s; font-size: 1rem; }
+        .btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(56, 189, 248, 0.4); }
+        #console { background: #000; color: #4ade80; padding: 15px; border-radius: 8px; font-family: monospace; height: 100px; overflow-y: auto; margin-bottom: 20px; border: 1px solid #1e293b; font-size: 0.85rem; line-height: 1.6; }
+        .event-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: none; justify-content: center; align-items: center; z-index: 100; }
+        .event-card { background: #fef08a; color: #854d0e; padding: 30px; border-radius: 15px; max-width: 400px; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
+        .stat-label { font-size: 0.8rem; color: #94a3b8; }
+        .report-section { margin-top: 20px; padding: 15px; background: rgba(255,255,255,0.05); border-radius: 8px; }
+    </style>
+</head>
+<body>
+
+<div class="event-overlay" id="event-layer">
+    <div class="event-card">
+        <h3 id="event-title">⚠️ 随机人生变量</h3>
+        <p id="event-desc" style="font-size: 1.1rem; line-height: 1.5;"></p>
+        <button class="btn" style="background:#854d0e; color:white;" onclick="closeEvent()">接受挑战</button>
+    </div>
+</div>
+
+<div class="container">
+    <div id="p1" class="step active">
+        <div style="text-align: center; padding: 40px 0;">
+            <h1 style="font-size: 2.8rem; margin-bottom: 10px; color: var(--accent);">择偶模拟器</h1>
+            <p style="font-size: 1.2rem; color: #94a3b8;">探究量化偏好如何决定市场均衡</p>
+            <div class="card" style="text-align: left; line-height: 1.8; margin-top: 30px;">
+                <p><b>实验前言：</b></p>
+                <p>择偶不仅是感性的吸引，更是一场关于<b>资源配置</b>与<b>效用最大化</b>的社会实验。本工具将带你进入一个“校园择偶市场”，通过以下三个阶段观察你的选择路径：</p>
+                <ul>
+                    <li><b>量化阶段：</b>将模糊的偏好转化为确定的权重。</li>
+                    <li><b>试错阶段：</b>在主动表白与经营中感受人际博弈。</li>
+                    <li><b>均衡阶段：</b>面对现实压力，观察最初的理想如何与最终的匹配达成妥协。</li>
+                </ul>
+            </div>
+            <button class="btn" onclick="go(2)">进入实验室</button>
+        </div>
+    </div>
+
+    <div id="p2" class="step">
+        <h2>第一步：量化你的效用偏好</h2>
+        <p class="stat-label">请配制你的“在意分”。这些分数代表了你在挑选伴侣时各项指标的优先级。</p>
+        <div class="card" id="weight-ui"></div>
+        <button class="btn" onclick="go(3)">定义我的初始画像</button>
+    </div>
+
+    <div id="p3" class="step">
+        <h2>第二步：定义你的市场竞争力</h2>
+        <div class="card" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+            <div><label>性别</label><select id="u-gen"><option value="male">男</option><option value="female">女</option></select></div>
+            <div><label>外貌吸引力 (1-10)</label><input type="range" id="u-app" min="1" max="10" value="6"></div>
+            <div><label>教育背景</label><select id="u-edu"><option value="low">普通本科</option><option value="mid">重点高校</option><option value="high">顶尖名校</option></select></div>
+            <div><label>性格/情绪价值</label><select id="u-soc"><option value="low">偏内敛</option><option value="mid">良好契合</option><option value="high">极高共情</option></select></div>
+            <div><label>家庭背景</label><select id="u-fam"><option value="low">普通家庭</option><option value="mid">中产阶级</option><option value="high">资源优渥</option></select></div>
+            <div><label>未来预期收入</label><select id="u-inc"><option value="low">稳定生活</option><option value="mid">高薪中坚</option><option value="high">财富爆发力</option></select></div>
+        </div>
+        <button class="btn" onclick="startMarket()">启动动态博弈市场</button>
+    </div>
+
+    <div id="p4" class="step">
+        <div id="console">> 校园匹配环境加载完毕...</div>
+        <div class="card">
+            <div id="candidate-content" style="min-height:180px;"></div>
+            <div id="action-bar" style="margin-top:15px; text-align:center;"></div>
+        </div>
+        <div style="text-align:center; margin-top:10px; color:#94a3b8;">
+            <span id="progress">1 / 30</span>
+        </div>
+    </div>
+
+    <div id="p5" class="step">
+        <h2 style="color:var(--marry)">择偶实验深度报告</h2>
+        <div class="card" id="final-report"></div>
+        <div class="card" style="border-top: 4px solid var(--accent);">
+            <h3>💡 专家级建议</h3>
+            <div id="advice-text" style="line-height: 1.8;"></div>
+        </div>
+        <button class="btn" onclick="location.reload()">重新开启模拟</button>
+    </div>
+</div>
+
+<script>
+/* ==========  基础工具  ========== */
+const state = { user: null, market: [], target: null, cursor: 0, bond: 0, tries: 0, history: [] };
+const CANDIDATE_COUNT = 30;
+const DIM = { app: '外貌', edu: '教育', soc: '性格', fam: '家庭', inc: '收入' };
+const weights = { app: 20, edu: 20, soc: 20, fam: 20, inc: 20 };
+
+function go(n) {
+    document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+    document.getElementById('p' + n).classList.add('active');
+    if (n === 2) renderWeights();
+}
+
+function renderWeights() {
+    const ui = document.getElementById('weight-ui');
+    ui.innerHTML = '';
+    Object.keys(DIM).forEach(k => {
+        ui.innerHTML += `
+            <div style="margin-bottom:15px;">
+                <div style="display:flex; justify-content:space-between;">
+                    <label>${DIM[k]}</label><span id="v-${k}">${weights[k]}%</span>
+                </div>
+                <input type="range" min="0" max="100" value="${weights[k]}" oninput="updateWeights('${k}', this.value)" style="width:100%">
+            </div>`;
+    });
+}
+function updateWeights(k, v) { weights[k] = parseInt(v); document.getElementById('v-' + k).innerText = v + '%'; }
+
+/* ==========  人物类  ========== */
+class Person {
+    constructor(id, gender, isUser = false) {
+        this.id = id; this.gender = gender; this.status = '单身';
+        const lv = ['low', 'mid', 'high'];
+        if (isUser) {
+            this.stats = {
+                app: parseInt(document.getElementById('u-app').value),
+                edu: document.getElementById('u-edu').value,
+                soc: document.getElementById('u-soc').value,
+                fam: document.getElementById('u-fam').value,
+                inc: document.getElementById('u-inc').value
+            };
+            this.weights = { ...weights };
+        } else {
+            this.stats = { app: Math.floor(Math.random() * 9) + 2, edu: lv[rand(3)], soc: lv[rand(3)], fam: lv[rand(3)], inc: lv[rand(3)] };
+            this.weights = { app: rW(), edu: rW(), soc: rW(), fam: rW(), inc: rW() };
+        }
+    }
+    getScore(other, phase = 'love') {
+        const scoreMap = { low: 40, mid: 70, high: 95 };
+        let s = 0, tw = 0, w = { ...this.weights };
+        if (phase === 'marry') { w.fam *= 2; w.inc *= 2; }
+        for (let k in w) {
+            let val = (k === 'app') ? other.stats[k] * 10 : scoreMap[other.stats[k]];
+            s += val * w[k]; tw += w[k];
+        }
+        return (s / tw) + (Math.random() * 6 - 3);
+    }
+}
+const rand = n => Math.floor(Math.random() * n);
+const rW = () => Math.random() * 50 + 10;
+
+/* ==========  市场启动  ========== */
+function startMarket() {
+    state.user = new Person(0, document.getElementById('u-gen').value, true);
+    const targetGen = state.user.gender === 'male' ? 'female' : 'male';
+    for (let i = 1; i <= CANDIDATE_COUNT; i++) state.market.push(new Person(i, targetGen));
+    state.cursor = 0; renderCandidate(); go(4);
+}
+
+/* ==========  单卡片渲染  ========== */
+function renderCandidate() {
+    const p = state.market[state.cursor];
+    const lMap = { low: '普通', mid: '优秀', high: '顶尖' };
+    const util = state.user.getScore(p, 'love').toFixed(0);
+
+    document.getElementById('candidate-content').innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div>
+                <b>候选 ID: ${p.id}</b>  (预期匹配度: ${util}%)<br>
+                <span class="stat-label">
+                    外貌:${p.stats.app} | 教育:${lMap[p.stats.edu]} | 性格:${lMap[p.stats.soc]} | 经济:${lMap[p.stats.inc]}
+                </span>
+            </div>
+            <div id="card-badge">${p.status}</div>
+        </div>`;
+    document.getElementById('progress').innerText = `${state.cursor + 1} / ${CANDIDATE_COUNT}`;
+    renderActionBar(p);
+}
+
+function renderActionBar(p) {
+    const bar = document.getElementById('action-bar');
+    bar.innerHTML = '';
+
+    if (state.target) { // 已恋爱
+        const isPartner = state.target.id === p.id;
+        bar.innerHTML += `<button class="btn" disabled style="margin:0 5px; background:#666;">表白</button>`;
+        if (isPartner) {
+            if (state.bond < 100) {
+                bar.innerHTML += `<button class="btn" onclick="act('bond')" style="margin:0 5px; background:var(--love);">经营感情</button>`;
+            } else {
+                bar.innerHTML += `<button class="btn" onclick="act('marry')" style="margin:0 5px; background:var(--marry);">求婚阶段</button>`;
+            }
+        }
+        bar.innerHTML += `<button class="btn" onclick="breakup()" style="margin:0 5px; background:#ef4444;">分手</button>`;
+        bar.innerHTML += `<button class="btn" disabled style="margin:0 5px;">下一位</button>`;
+    } else { // 自由身
+        bar.innerHTML += `<button class="btn" onclick="act('confess')" style="margin:0 5px;">表白</button>`;
+        bar.innerHTML += `<button class="btn" onclick="nextCandidate()" style="margin:0 5px;">下一位</button>`;
+    }
+}
+
+/* ==========  动作与事件  ========== */
+function act(type) {
+    const p = state.market[state.cursor];
+    const c = document.getElementById('console');
+    if (type === 'confess') {
+        state.tries++;
+        if (p.getScore(state.user, 'love') > 50) {
+            state.target = p; p.status = '恋爱中'; state.bond = 35;
+            c.innerHTML = `> [成功] 你与 ID ${p.id} 建立了恋爱关系。`;
+        } else {
+            c.innerHTML = `> [被拒] ID ${p.id} 认为你的属性分布不在其优先考虑范围内。`;
+        }
+    } else if (type === 'bond') {
+        state.bond += 25;
+        if (Math.random() > 0.6) triggerEvent();
+        if (state.bond >= 100) state.bond = 100;
+        c.innerHTML = `> [动态] 互动中... 当前情感契合度: ${state.bond}%`;
+    } else if (type === 'marry') {
+        if (p.getScore(state.user, 'marry') > 70) {
+            p.status = '已婚'; finish(true);
+        } else {
+            c.innerHTML = `> [遗憾] 求婚被拒。进入现实阶段后，对方重新评估了你们的资源匹配度。`;
+            state.target = null; p.status = '已分手'; state.bond = 0;
+        }
+    }
+    renderCandidate();
+}
+
+function nextCandidate() {
+    if (state.target) return;
+    state.history.push({ id: state.market[state.cursor].id, action: 'skip' });
+    state.cursor++;
+    if (state.cursor >= CANDIDATE_COUNT) {
+        document.getElementById('console').innerHTML = '> 已浏览全部候选，实验结束。';
+        finish(false); return;
+    }
+    renderCandidate();
+}
+
+function breakup() {
+    if (!state.target) return;
+    document.getElementById('console').innerHTML = `> [分手] 你与 ID ${state.target.id} 结束了恋爱关系。`;
+    state.target.status = '单身';
+    state.target = null; state.bond = 0;
+    renderCandidate();
+}
+
+/* ==========  随机事件  ========== */
+const EVENTS = [
+    { t: "对方家长通过侧面了解了你的背景，提出了“门当户对”的担忧。", d: -35 },
+    { t: "你们一起完成了一个高难度的课题项目，默契度爆发。", d: 25 },
+    { t: "由于异地实习，双方对未来的职业规划出现了严重分歧。", d: -30 },
+    { t: "对方在低谷期得到了你的情绪支持，依赖度提升。", d: 20 }
+];
+function triggerEvent() {
+    const ev = EVENTS[rand(EVENTS.length)];
+    state.bond += ev.d;
+    document.getElementById('event-desc').innerText = ev.t;
+    document.getElementById('event-layer').style.display = 'flex';
+}
+function closeEvent() { document.getElementById('event-layer').style.display = 'none'; }
+
+/* ==========  实验结束  ========== */
+function finish(success) {
+    go(5);
+    const r = document.getElementById('final-report');
+    const a = document.getElementById('advice-text');
+    if (!success) {
+        r.innerHTML = `
+            <div class="report-section">
+                <p><b>最终状态：</b> 未建立稳定恋爱关系</p>
+                <p><b>市场博弈：</b> 你共浏览了 ${state.cursor} 位候选，主动表白 ${state.tries} 次。</p>
+            </div>`;
+        a.innerHTML = '你选择了继续搜索而未妥协，这在真实市场中可能意味着更高的时间成本。建议适当放宽最不重要的维度，以缩短搜索周期。';
+        return;
+    }
+    const p = state.target;
+    const matchUtility = state.user.getScore(p, 'marry').toFixed(1);
+    const scoreMap = { low: 1, mid: 2, high: 3 };
+    let maxWKey = Object.keys(weights).reduce((a, b) => weights[a] > weights[b] ? a : b);
+    let compromiseVal = (maxWKey === 'app') ? p.stats.app / 3 : scoreMap[p.stats[maxWKey]];
+    let isCompromised = compromiseVal < 2;
+
+    r.innerHTML = `
+        <div class="report-section">
+            <p><b>最终伴侣：</b> 同学 ID ${p.id}</p>
+            <p><b>匹配效用值：</b> ${matchUtility} / 100</p>
+            <p><b>市场博弈：</b> 你在达成均衡前，主动探索了 ${state.tries} 次潜在机会。</p>
+        </div>
+        <div class="report-section" style="background: rgba(56, 189, 248, 0.1);">
+            <p><b>🔍 实验观察：</b></p>
+            <p>你在第一阶段设定的核心诉求是 <b>${DIM[maxWKey]}</b> (${weights[maxWKey]}%)。</p>
+            <p>在最终均衡中，该维度的实际满足度为 <b>${isCompromised ? '部分妥协' : '完美契合'}</b>。</p>
+        </div>`;
+
+    let advice = '';
+    if (isCompromised) {
+        advice += `你的行为轨迹显示你是一个<b>“务实策略者”</b>。虽然你非常看重${DIM[maxWKey]}，但在面对现实压力时，理智地接受了一个综合抗风险能力较强的对象。`;
+    } else {
+        advice += `你属于极少数的<b>“理想主义胜出者”</b>。你不仅坚守了对${DIM[maxWKey]}的高要求，还顺利通过了现实维度的核算。`;
+    }
+    if (state.tries > 10) {
+        advice += `<br><br><b>关于探索成本：</b>你的试错次数较高，请警惕真实市场中过高搜索成本带来的疲惫感。`;
+    }
+    if (p.stats.inc === 'low' || p.stats.fam === 'low') {
+        advice += `<br><br><b>生活预警：</b>当前匹配伴侣的经济维度得分较低，未来需消耗更多性格成本来抵消物质压力。`;
+    }
+    a.innerHTML = advice;
+}
+</script>
+</body>
+</html>
